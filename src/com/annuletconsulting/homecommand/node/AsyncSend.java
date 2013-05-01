@@ -21,6 +21,13 @@ import java.io.BufferedOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.Calendar;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.apache.commons.codec.binary.Hex;
+
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.AsyncTaskLoader;
@@ -30,6 +37,8 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.TextToSpeech.OnUtteranceCompletedListener;
 
 public class AsyncSend implements LoaderCallbacks<String> {
+    private static final String ENCODING_FORMAT = "UTF8";
+	private static final String SIGNATURE_METHOD = "HmacSHA256";
 	private static ViewFragment viewFragment;
 	private static Activity activity;
 	private static String ipAddr;
@@ -37,14 +46,16 @@ public class AsyncSend implements LoaderCallbacks<String> {
 	private static int port;
 	private static TextToSpeech tts;
 	private static Runnable finishListener;
+	private static String sharedKey = null;
 	
-	public AsyncSend(ViewFragment viewFragment, Activity activity, String ipAddr, int port, String cmd, Runnable finishListener) {
+	public AsyncSend(Activity activity, ViewFragment viewFragment, String ipAddr, int port, String sharedKey, String cmd, Runnable finishListener) {
 		tts = new TextToSpeech(activity, null);
 		AsyncSend.viewFragment = viewFragment;
 		AsyncSend.activity = activity;
 		AsyncSend.ipAddr = ipAddr;
 		AsyncSend.cmd = cmd;
 		AsyncSend.port = port;
+		AsyncSend.sharedKey = sharedKey;
 		AsyncSend.finishListener = finishListener;
 	}
 
@@ -85,8 +96,42 @@ public class AsyncSend implements LoaderCallbacks<String> {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{ \"command\": \"");
 		sb.append(cmd);
-		sb.append("\", \"node_type\": \"ANDROID\" }");
+		sb.append("\", \"node_type\": \"ANDROID");
+		if (sharedKey  != null) {
+			String timeStamp = getTimestamp();
+			sb.append("\", \"time_stamp\": \"");
+			sb.append(timeStamp);
+			sb.append("\", \"signature\": \"");
+			sb.append(getSignature(timeStamp));
+		}
+		sb.append("\" }");
 		return sb.toString();
+	}
+
+	private String getSignature(String timeStamp) {
+    	try {
+			byte[] data = timeStamp.getBytes(ENCODING_FORMAT);
+			Mac mac = Mac.getInstance(SIGNATURE_METHOD);
+			mac.init(new SecretKeySpec(sharedKey.getBytes(ENCODING_FORMAT), SIGNATURE_METHOD));
+			char[] signature = Hex.encodeHex(mac.doFinal(data));
+			return new String( signature );
+		}
+		catch ( Exception exception ) {
+			return "Error in getSignature()";
+		}
+	}
+
+	private String getTimestamp() {
+		Calendar today = Calendar.getInstance();
+		StringBuffer out = new StringBuffer();
+		out.append(today.get(Calendar.YEAR));
+		out.append(today.get(Calendar.MONTH)+1);
+		out.append(today.get(Calendar.DATE));
+		out.append(today.get(Calendar.HOUR_OF_DAY));
+		out.append(today.get(Calendar.MINUTE));
+		out.append(today.get(Calendar.SECOND));
+		out.append(today.get(Calendar.MILLISECOND));
+		return out.toString();
 	}
 
 	@Override
@@ -120,4 +165,11 @@ public class AsyncSend implements LoaderCallbacks<String> {
     	}
     	return false;
     }
+
+	/**
+	 * @param sharedKey the sharedKey to set
+	 */
+	public static void setSharedKey(String sharedKey) {
+		AsyncSend.sharedKey = sharedKey;
+	}
 }

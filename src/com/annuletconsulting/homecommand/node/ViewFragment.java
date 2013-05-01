@@ -39,6 +39,7 @@ public class ViewFragment extends Fragment {
 		View v = inflater.inflate(R.layout.view_fragment, null);
 		log = (TextView) v.findViewById(R.id.log);
 		log.setText(logTxt.toString());
+		instance = this;
 		return v;
 	}
 	

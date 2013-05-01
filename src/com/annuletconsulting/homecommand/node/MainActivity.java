@@ -45,6 +45,7 @@ import android.widget.EditText;
  * @company Annulet Consulting, LLC
  */
 public class MainActivity extends FragmentActivity {
+	public static final String SHARED_KEY = "SHARED_KEY";
 	public static String SERVER = "SERVER_IP";
 	public static String PORT = "PORT_NUM";
 	private static SharedPreferences sharedPreferences;
@@ -100,11 +101,13 @@ public class MainActivity extends FragmentActivity {
 	    final AlertDialog dialog = new AlertDialog.Builder(this).setView(layout).create();
 		((EditText) layout.findViewById(R.id.server_ip)).setText(getValueFromSharedPreferences(SERVER));
 		((EditText) layout.findViewById(R.id.port)).setText(getValueFromSharedPreferences(PORT));
+		((EditText) layout.findViewById(R.id.shared_key)).setText(getValueFromSharedPreferences(SHARED_KEY));
 	    ((Button)layout.findViewById(R.id.dialog_save)).setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				storeValueInSharedPreferences(SERVER, ((EditText) layout.findViewById(R.id.server_ip)).getText().toString());
 				storeValueInSharedPreferences(PORT, ((EditText) layout.findViewById(R.id.port)).getText().toString());
+				storeValueInSharedPreferences(SHARED_KEY, ((EditText) layout.findViewById(R.id.shared_key)).getText().toString());
 				dialog.dismiss();
 			}
 		});

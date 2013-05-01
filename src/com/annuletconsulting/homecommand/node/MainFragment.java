@@ -241,10 +241,11 @@ public class MainFragment extends Fragment {
 	private void sendToServer(String cmd) {
 		Log.d(TAG, cmd);
 		try {
-			getActivity().getLoaderManager().initLoader(loader++, null, new AsyncSend(ViewFragment.getInstance(), 
-																					  getActivity(),
+			getActivity().getLoaderManager().initLoader(loader++, null, new AsyncSend(getActivity(),
+																					  ViewFragment.getInstance(), 
 																					  MainActivity.getValueFromSharedPreferences(MainActivity.SERVER),
 																					  Integer.parseInt(MainActivity.getValueFromSharedPreferences(MainActivity.PORT)),
+																					  MainActivity.getValueFromSharedPreferences(MainActivity.SHARED_KEY),
 																					  cmd.toUpperCase(), 
 																					  runner)).forceLoad();
 		} catch (Exception e) {
