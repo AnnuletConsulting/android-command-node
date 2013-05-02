@@ -31,6 +31,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 
 /**
@@ -45,9 +46,11 @@ import android.widget.EditText;
  * @company Annulet Consulting, LLC
  */
 public class MainActivity extends FragmentActivity {
-	public static final String SHARED_KEY = "SHARED_KEY";
-	public static String SERVER = "SERVER_IP";
-	public static String PORT = "PORT_NUM";
+	static final String SHARED_KEY = "SHARED_KEY";
+	static final String ENCRPYT_CMD = "ENCRPYT_CMD";
+	static final String SERVER = "SERVER_IP";
+	static final String PORT = "PORT_NUM";
+	
 	private static SharedPreferences sharedPreferences;
 
 	/**
@@ -102,12 +105,14 @@ public class MainActivity extends FragmentActivity {
 		((EditText) layout.findViewById(R.id.server_ip)).setText(getValueFromSharedPreferences(SERVER));
 		((EditText) layout.findViewById(R.id.port)).setText(getValueFromSharedPreferences(PORT));
 		((EditText) layout.findViewById(R.id.shared_key)).setText(getValueFromSharedPreferences(SHARED_KEY));
+		((CheckBox) layout.findViewById(R.id.encrypt_checkbox)).setChecked("Y".equals(getValueFromSharedPreferences(ENCRPYT_CMD)));
 	    ((Button)layout.findViewById(R.id.dialog_save)).setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				storeValueInSharedPreferences(SERVER, ((EditText) layout.findViewById(R.id.server_ip)).getText().toString());
 				storeValueInSharedPreferences(PORT, ((EditText) layout.findViewById(R.id.port)).getText().toString());
 				storeValueInSharedPreferences(SHARED_KEY, ((EditText) layout.findViewById(R.id.shared_key)).getText().toString());
+				storeValueInSharedPreferences(ENCRPYT_CMD, ((CheckBox) layout.findViewById(R.id.encrypt_checkbox)).isChecked()?"Y":"N");
 				dialog.dismiss();
 			}
 		});

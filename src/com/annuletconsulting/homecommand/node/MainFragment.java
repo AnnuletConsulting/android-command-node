@@ -246,6 +246,7 @@ public class MainFragment extends Fragment {
 																					  MainActivity.getValueFromSharedPreferences(MainActivity.SERVER),
 																					  Integer.parseInt(MainActivity.getValueFromSharedPreferences(MainActivity.PORT)),
 																					  MainActivity.getValueFromSharedPreferences(MainActivity.SHARED_KEY),
+																					  "Y".equals(MainActivity.getValueFromSharedPreferences(MainActivity.ENCRPYT_CMD)),
 																					  cmd.toUpperCase(), 
 																					  runner)).forceLoad();
 		} catch (Exception e) {

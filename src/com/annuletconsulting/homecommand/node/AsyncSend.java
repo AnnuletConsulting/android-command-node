@@ -22,41 +22,39 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Calendar;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.commons.codec.binary.Hex;
-
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.AsyncTaskLoader;
 import android.content.Loader;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
-import android.speech.tts.TextToSpeech.OnUtteranceCompletedListener;
 
 public class AsyncSend implements LoaderCallbacks<String> {
-    private static final String ENCODING_FORMAT = "UTF8";
+	private static final String ENCODING_FORMAT = "UTF8";
 	private static final String SIGNATURE_METHOD = "HmacSHA256";
-	private static ViewFragment viewFragment;
-	private static Activity activity;
-	private static String ipAddr;
-	private static String cmd;
-	private static int port;
-	private static TextToSpeech tts;
-	private static Runnable finishListener;
-	private static String sharedKey = null;
-	
-	public AsyncSend(Activity activity, ViewFragment viewFragment, String ipAddr, int port, String sharedKey, String cmd, Runnable finishListener) {
+	private TextToSpeech tts;
+	private ViewFragment viewFragment;
+	private Activity activity;
+	private String ipAddr;
+	private String command;
+	private int port;
+	private Runnable finishListener;
+	private String sharedKey = null;
+	private boolean encryptCmd;
+
+	public AsyncSend(Activity activity, ViewFragment viewFragment, String ipAddr, int port, String sharedKey, boolean encryptCmd, String cmd, Runnable finishListener) {
 		tts = new TextToSpeech(activity, null);
-		AsyncSend.viewFragment = viewFragment;
-		AsyncSend.activity = activity;
-		AsyncSend.ipAddr = ipAddr;
-		AsyncSend.cmd = cmd;
-		AsyncSend.port = port;
-		AsyncSend.sharedKey = sharedKey;
-		AsyncSend.finishListener = finishListener;
+		this.viewFragment = viewFragment;
+		this.activity = activity;
+		this.ipAddr = ipAddr;
+		command = cmd;
+		this.port = port;
+		this.encryptCmd = encryptCmd;
+		this.sharedKey = sharedKey;
+		this.finishListener = finishListener;
 	}
 
 	@Override
@@ -67,20 +65,20 @@ public class AsyncSend implements LoaderCallbacks<String> {
 				StringBuffer instr = new StringBuffer();
 				try {
 					Socket connection = new Socket(ipAddr, port);
-			    	BufferedOutputStream bos = new BufferedOutputStream(connection.getOutputStream());
-			    	OutputStreamWriter osw = new OutputStreamWriter(bos, "US-ASCII");
-			    	osw.write(formatJSON(cmd));
-			    	osw.write(13);
-			    	osw.flush();
-			    	BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
+					BufferedOutputStream bos = new BufferedOutputStream(connection.getOutputStream());
+					OutputStreamWriter osw = new OutputStreamWriter(bos, "US-ASCII");
+					osw.write(formatJSON(command.toUpperCase()));
+					osw.write(13);
+					osw.flush();
+					BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
 					InputStreamReader isr = new InputStreamReader(bis, "US-ASCII");
 					int c;
 					while ((c = isr.read()) != 13)
 						instr.append((char) c);
 					isr.close();
 					bis.close();
-			    	osw.close();
-			    	bos.close();
+					osw.close();
+					bos.close();
 					connection.close();
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -88,19 +86,26 @@ public class AsyncSend implements LoaderCallbacks<String> {
 				return instr.toString();
 			}
 		};
-//		loader.forceLoad();
 		return loader;
 	}
 
+	/**
+	 * Create a JSON formatted string to send the information to the server. 
+	 * 
+	 * @param cmd
+	 * @return
+	 */
 	protected String formatJSON(String cmd) {
 		StringBuffer sb = new StringBuffer();
 		sb.append("{ \"command\": \"");
-		sb.append(cmd);
+		sb.append(encryptCmd?encrypt(cmd):cmd);
 		sb.append("\", \"node_type\": \"ANDROID");
 		if (sharedKey  != null) {
 			String timeStamp = getTimestamp();
 			sb.append("\", \"time_stamp\": \"");
 			sb.append(timeStamp);
+			sb.append("\", \"cmd_encoded\": \"");
+			sb.append(encryptCmd?"Y":"N");
 			sb.append("\", \"signature\": \"");
 			sb.append(getSignature(timeStamp));
 		}
@@ -108,8 +113,15 @@ public class AsyncSend implements LoaderCallbacks<String> {
 		return sb.toString();
 	}
 
+	/**
+	 * Creates the signature from the timestamp using the sharedKey.  This same method will be used
+	 * on the server and the results compared to authenticate the request.
+	 * 
+	 * @param timeStamp
+	 * @return
+	 */
 	private String getSignature(String timeStamp) {
-    	try {
+		try {
 			byte[] data = timeStamp.getBytes(ENCODING_FORMAT);
 			Mac mac = Mac.getInstance(SIGNATURE_METHOD);
 			mac.init(new SecretKeySpec(sharedKey.getBytes(ENCODING_FORMAT), SIGNATURE_METHOD));
@@ -121,6 +133,21 @@ public class AsyncSend implements LoaderCallbacks<String> {
 		}
 	}
 
+	/**
+	 * TODO implement encryption that can be decrypted on server.
+	 * 
+	 * @param cleartext
+	 * @return
+	 */
+	private String encrypt(String cleartext) {
+		return cleartext;
+	}
+
+	/**
+	 * Creates the timestamp to be used in signing the JSON request.
+	 * 
+	 * @return
+	 */
 	private String getTimestamp() {
 		Calendar today = Calendar.getInstance();
 		StringBuffer out = new StringBuffer();
@@ -149,27 +176,27 @@ public class AsyncSend implements LoaderCallbacks<String> {
 	}
 
 	public static String extractElement(String json, String element) {
-        while (json.indexOf(element) != -1) {        
-            int startIndex = json.indexOf("\"", json.indexOf(element)+2+element.length());
-            int endIndex = json.indexOf("\"", startIndex+1);
-            return json.substring(startIndex+1, endIndex).toUpperCase();
-        }
-        return null;            
-    }
-    
-    @SuppressWarnings("deprecation")
-	public static boolean speak(String text) {
-    	if (text != null && text.length() > 0) {
-    		tts.speak(text, TextToSpeech.QUEUE_ADD, null);
-    		return true;
-    	}
-    	return false;
-    }
+		while (json.indexOf(element) != -1) {        
+			int startIndex = json.indexOf("\"", json.indexOf(element)+2+element.length());
+			int endIndex = json.indexOf("\"", startIndex+1);
+			return json.substring(startIndex+1, endIndex);
+		}
+		return null;            
+	}
 
 	/**
-	 * @param sharedKey the sharedKey to set
+	 * This launched an asynchronous process that speaks the text provided if it isn't null or 0 length
+	 * 
+	 * TODO: run the finishedListener after speech is completed rather than after this is launched.
+	 * 
+	 * @param text
+	 * @return
 	 */
-	public static void setSharedKey(String sharedKey) {
-		AsyncSend.sharedKey = sharedKey;
+	public boolean speak(String text) {
+		if (text != null && text.length() > 0) {
+			tts.speak(text, TextToSpeech.QUEUE_ADD, null);
+			return true;
+		}
+		return false;
 	}
 }
