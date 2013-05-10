@@ -39,8 +39,8 @@ import android.widget.EditText;
  * then send them to the server app which will process them and return a text command
  * that determines what the node does next. 
  * 
- * It will also provide a settings page that will store things like the command phrase,
- * node name, shared key, and the ip/port of the local HC server, to the local database. 
+ * It will also provide a settings page that will store things like the command phrase
+ * node name and the ip/port of the local HC server, to the local database. 
  * 
  * @author Walt Moorhouse
  * @company Annulet Consulting, LLC

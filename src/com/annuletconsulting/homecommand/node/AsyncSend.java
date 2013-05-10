@@ -22,9 +22,13 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Calendar;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.codec.binary.Hex;
+
+import com.annuletconsulting.oss.SimpleCrypto;
 import android.app.Activity;
 import android.app.LoaderManager.LoaderCallbacks;
 import android.content.AsyncTaskLoader;
@@ -33,7 +37,7 @@ import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 
 public class AsyncSend implements LoaderCallbacks<String> {
-	private static final String ENCODING_FORMAT = "UTF8";
+    private static final String ENCODING_FORMAT = "UTF8";
 	private static final String SIGNATURE_METHOD = "HmacSHA256";
 	private TextToSpeech tts;
 	private ViewFragment viewFragment;
@@ -41,8 +45,9 @@ public class AsyncSend implements LoaderCallbacks<String> {
 	private String ipAddr;
 	private String command;
 	private int port;
+	private int playerCount = 1;
 	private Runnable finishListener;
-	private String sharedKey = null;
+	private static String sharedKey = null;
 	private boolean encryptCmd;
 
 	public AsyncSend(Activity activity, ViewFragment viewFragment, String ipAddr, int port, String sharedKey, boolean encryptCmd, String cmd, Runnable finishListener) {
@@ -53,7 +58,7 @@ public class AsyncSend implements LoaderCallbacks<String> {
 		command = cmd;
 		this.port = port;
 		this.encryptCmd = encryptCmd;
-		this.sharedKey = sharedKey;
+		AsyncSend.sharedKey = sharedKey;
 		this.finishListener = finishListener;
 	}
 
@@ -120,26 +125,31 @@ public class AsyncSend implements LoaderCallbacks<String> {
 	 * @param timeStamp
 	 * @return
 	 */
-	private String getSignature(String timeStamp) {
-		try {
+	private static String getSignature(String timeStamp) {
+		if (sharedKey != null) try {
 			byte[] data = timeStamp.getBytes(ENCODING_FORMAT);
 			Mac mac = Mac.getInstance(SIGNATURE_METHOD);
 			mac.init(new SecretKeySpec(sharedKey.getBytes(ENCODING_FORMAT), SIGNATURE_METHOD));
 			char[] signature = Hex.encodeHex(mac.doFinal(data));
-			return new String( signature );
+			return new String(signature);
+		} catch (Exception exception) {
+			exception.printStackTrace();
 		}
-		catch ( Exception exception ) {
-			return "Error in getSignature()";
-		}
+		return "Error in getSignature()";
 	}
 
 	/**
-	 * TODO implement encryption that can be decrypted on server.
+	 * Encrypt the command string.
 	 * 
 	 * @param cleartext
 	 * @return
 	 */
-	private String encrypt(String cleartext) {
+	private static String encrypt(String cleartext) {
+		if (sharedKey != null) try {
+			return SimpleCrypto.encrypt(sharedKey, cleartext);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return cleartext;
 	}
 
@@ -169,6 +179,21 @@ public class AsyncSend implements LoaderCallbacks<String> {
 			speak(extractElement(data, "speech"));
 		}
 		finishListener.run(); //TODO make this run after speech is complete so it doesn't loop.
+//		mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+//			@Override
+//			public void onCompletion(MediaPlayer mediaPlayer)  {
+//				playSong(mediaPlayer, getNextSong());
+//			}
+//		});
+		playSong(extractElement(data, "stream"));
+	}
+	
+	private void playSong(String dataSource) {
+		if (dataSource != null) {
+			String[] split = dataSource.split(":");
+			AsyncPlayer aPlayer = new AsyncPlayer(activity, split[0], Integer.parseInt(split[1]));
+			aPlayer.onCreateLoader(playerCount++, null).forceLoad();
+		}
 	}
 
 	@Override
